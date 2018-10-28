@@ -1,3 +1,24 @@
+// **************************************************************************************************
+// Delphi Aio Library.
+// Unit Greenlets
+// https://github.com/Purik/AIO
+
+// The contents of this file are subject to the Apache License 2.0 (the "License");
+// you may not use this file except in compliance with the License. You may obtain a copy of the
+// License at http://www.apache.org/licenses/LICENSE-2.0
+//
+//
+// The Original Code is Greenlets.pas.
+//
+// Contributor(s):
+// Pavel Minenkov
+// Purik
+// https://github.com/Purik
+//
+// The Initial Developer of the Original Code is Pavel Minenkov [Purik].
+// All Rights Reserved.
+//
+// **************************************************************************************************
 unit Greenlets;
 
 interface
@@ -605,8 +626,6 @@ type
     class operator In(a: ICase; b: TCaseSet) : Boolean;
   end;
 
-function Slice(const Args: array of const; FromIndex: Integer;
-  ToIndex: Integer = -1): tTuple;
 // current context
 function GetCurrent: TObject;
 function GetEnvironment: IGreenEnvironment;

@@ -1,6 +1,28 @@
+// **************************************************************************************************
+// Delphi Aio Library.
+// Unit MonkeyPatch
+// https://github.com/Purik/AIO
+
+// The contents of this file are subject to the Apache License 2.0 (the "License");
+// you may not use this file except in compliance with the License. You may obtain a copy of the
+// License at http://www.apache.org/licenses/LICENSE-2.0
+//
+//
+// The Original Code is MoneyPatch.pas.
+//
+// Contributor(s):
+// Pavel Minenkov
+// Purik
+// https://github.com/Purik
+//
+// The Initial Developer of the Original Code is Pavel Minenkov [Purik].
+// All Rights Reserved.
+//
+// **************************************************************************************************
 unit MonkeyPatch;
 
 interface
+uses DDetours;
 
 procedure PatchWinMsg(Patch: Boolean);
 procedure PatchEvent(Patch: Boolean);
@@ -16,12 +38,21 @@ const
   INSTR_SIZE = 6;
 
 {$IFDEF MSWINDOWS}
+type
+  TGetMessageWProc = function(var lpMsg: TMsg; hWnd: HWND; wMsgFilterMin, wMsgFilterMax: UINT): BOOL; stdcall;
+  TWaitMessageProc = function: BOOL; stdcall;
+  TWaitForSingleObjectProc = function (hHandle: THandle; dwMilliseconds: DWORD): DWORD; stdcall;
+
 var
-  OldBytesGetMessageW: array [0..INSTR_SIZE-1] of Byte;
-  OldBytesWaitMessage: array [0..INSTR_SIZE-1] of Byte;
-  OldBytesWaitEvent: array [0..INSTR_SIZE-1] of Byte;
+ 
   WinMsgPatched: Boolean = False;
   EventPatched: Boolean = False;
+
+  WaitMessageHook: TWaitMessageProc;
+  GetMessageWHook: TGetMessageWProc;
+  WaitForSingleObjectHook: TWaitForSingleObjectProc;
+
+
 
 {$ENDIF}
 
@@ -99,15 +130,13 @@ var
   OrigWaitMessage: Pointer;
 begin
   if Patch <> WinMsgPatched then begin
-    OrigGetMessageW := GetProcAddress(GetModuleHandle('user32.dll'), 'GetMessageW');
-    OrigWaitMessage := GetProcAddress(GetModuleHandle('user32.dll'), 'WaitMessage');
     if Patch then begin
-      ApiRedirect(OrigGetMessageW, @PatchedGetMessageW, OldBytesGetMessageW);
-      ApiRedirect(OrigWaitMessage, @PatchedWaitMessage, OldBytesWaitMessage);
+      GetMessageWHook := InterceptCreate(@GetMessageW, @PatchedGetMessageW);
+      WaitMessageHook := InterceptCreate(@WaitMessage, @PatchedWaitMessage);
     end
     else begin
-      Move(OldBytesGetMessageW, OrigGetMessageW, INSTR_SIZE);
-      Move(OldBytesWaitMessage, OrigWaitMessage, INSTR_SIZE);
+      InterceptRemove(@GetMessageWHook);
+      InterceptRemove(@WaitMessageHook);
     end;
     WinMsgPatched := Patch;
   end;
@@ -117,14 +146,12 @@ procedure PatchEvent(Patch: Boolean);
 var
   OrigWaitEvent: Pointer;
 begin
-  //OldWaitEvent
   if Patch <> EventPatched then begin
-    OrigWaitEvent := GetProcAddress(GetModuleHandle('kernel32.dll'), 'WaitForSingleObject');
     if Patch then begin
-      ApiRedirect(OrigWaitEvent, @PatchedWaitForSingleObject, OldBytesWaitEvent);
+      WaitForSingleObjectHook := InterceptCreate(@WaitForSingleObject, @PatchedWaitForSingleObject)
     end
     else begin
-      Move(OldBytesWaitEvent, OrigWaitEvent, INSTR_SIZE);
+      InterceptRemove(@WaitForSingleObjectHook);
     end;
     WinMsgPatched := Patch;
   end;
